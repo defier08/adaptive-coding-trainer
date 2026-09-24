@@ -1,0 +1,17 @@
+# 本地真实配置（含个人绝对路径），不要提交到 GitHub
+config.json
+
+# AI 编辑器缓存
+.codebuddy/
+.cursor/
+.idea/
+.vscode/
+
+# 临时报告文件
+share_check_report.md
+*.tmp
+
+# Python/Node 缓存与日志
+__pycache__/
+*.pyc
+node_modules/

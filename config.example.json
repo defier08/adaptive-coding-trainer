@@ -1,0 +1,6 @@
+{
+  "adaptive_coding_dir": "",
+  "_comment": {
+    "adaptive_coding_dir": "可选。学习数据根目录（progress.json / library/ / modules/ 所在），留空默认 ~/.codebuddy/adaptive-coding。本 skill 运行时读取环境变量 ADAPTIVE_CODING_DIR（优先级最高），未设置时使用默认路径；config.example.json 仅作为配置项说明模板，不参与引擎读取。"
+  }
+}
