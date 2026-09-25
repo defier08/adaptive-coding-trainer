@@ -29,10 +29,17 @@ description: 当需要进行交互式、自适应编程练习时使用本 skill�
 本 Skill **开箱即用**：默认无需任何配置，学习数据自动存储在用户级 `~/.codebuddy/adaptive-coding/`（`progress.json` / `library/` / `modules/`）。
 
 配置项说明：
-- `ADAPTIVE_CODING_DIR`（可选）：学习数据根目录。留空使用默认 `~/.codebuddy/adaptive-coding`；可通过环境变量覆盖（引擎运行时读取，优先级最高），派生路径 `progress.json` / `library/` / `modules/` 随之变化。
+- `ADAPTIVE_CODING_DIR`（可选）：学习数据根目录。优先级：环境变量 > `config.json` 的 `adaptive_coding_dir` > 默认 `~/.codebuddy/adaptive-coding`，派生路径 `progress.json` / `library/` / `modules/` 随之变化。
 - 首次使用可运行 `node scripts/trainer.mjs init` 在默认目录初始化数据；`scan` 会自动扫描 `library/`。
 
-配置文件位置：`config.example.json`（与 SKILL.md 同目录，记录配置项说明）；本 skill 的实际配置机制为环境变量 `ADAPTIVE_CODING_DIR`。
+配置方式：**环境变量 `ADAPTIVE_CODING_DIR` 优先级最高**；未设置时引擎读取 `config.json` 的 `adaptive_coding_dir`；两者都没有才用默认 `~/.codebuddy/adaptive-coding`。`config.example.json` 是字段说明模板（复制为 `config.json` 并填 `adaptive_coding_dir` 即可生效）。设置示例：
+
+```powershell
+$env:ADAPTIVE_CODING_DIR="D:\我的题库"   # Windows PowerShell，当前会话生效
+setx ADAPTIVE_CODING_DIR "D:\我的题库"   # 永久生效（需重开终端）
+```
+
+
 修改配置：随时告诉我"重新配置 adaptive-coding-trainer"即可重新引导。
 
 ## Core Workflow（出题 → 写 → 验证 → 推进 闭环）
@@ -45,7 +52,7 @@ description: 当需要进行交互式、自适应编程练习时使用本 skill�
    - 用户踩坑 / 报错 → 沉淀成针对性题目（同样落 `library/`），再 `enqueue --kp <知识点名> --source stuck` 入队（场景三）。
    - 否则调用 `node scripts/trainer.mjs pick`，引擎按优先级（选题队列：卡点 > 项目驱动 > SM-2 到期 > 新题）自动选题（pick 会自动 scan，无需手动 init/scan）。
 2. **落盘题目文件**
-   - 知识点层：生成 `example.js`（教，必有，最小化）+ `template.js`（练，必有，含 `// TODO`）+ `test.js`（验，按需）。规范见 `references/file-convention.md`。
+   - 知识点层：生成 `example.js`（教，必有，**必须讲解知识点本身**，不能只是能运行的可运行壳）+ `template.js`（练，必有，含 `// TODO`）+ `test.js`（验，按需）。规范见 `references/file-convention.md`。
    - 模块层：生成 `01-方案选型.md` / `02-推荐方案实现.md` / `03-调用链.md` / `04-知识点清单.md` / `05-综合练习`。规范见 `references/module-layer.md`。
 3. **用户填写**：用户仅在 `template.js` 的 `// TODO` 处写实现（或完成模块层综合练习）。
 4. **运行验证**
@@ -54,6 +61,7 @@ description: 当需要进行交互式、自适应编程练习时使用本 skill�
 5. **客观判定质量分 q**（依据 `references/sm2-algorithm.md` 的 q 表，客观为主）。
 6. **推进 SM-2**：`node scripts/trainer.mjs review-next --kp <知识点名> --q <0-5> --variant <第1步返回的变体标识>`。务必带上第 1 步 `pick` 返回的 `variant`，否则防背题的变体记录会退化为根题。
 7. **循环**：回到第 1 步，引擎会优先推到期复习与薄弱点。
+8. **看全局**：需要纵览掌握情况时用 `node scripts/trainer.mjs graph`（依赖图 + 各点状态 + 薄弱前置 + 缺失前置）；按标签 / 难度浏览题库用 `node scripts/trainer.mjs view`。
 
 ## 两层粒度（必须分清）
 
@@ -65,6 +73,15 @@ description: 当需要进行交互式、自适应编程练习时使用本 skill�
 - 调研业界主流规范方案，给出：① 选型对比（几种主流 + 原理 + 适用场景）② 完整可运行规范实现 ③ 最佳实践 ④ 常见坑。
 - 用户项目代码若出现偏差，借机对照主流方案纠偏（"你的写法 vs 主流写法，差在哪、为什么该改"）。
 - 示例文件坚持**最小化、以教会知识点为先**，不做无关复杂演示。
+
+## 内容纠偏（题出错了怎么办）
+
+AI 出的题可能质量差（示例讲错 / 测试太松 / 参照错误）。发现时可把该知识点标记弃用，让它退出选题与复习循环：
+
+- `node scripts/trainer.mjs deprecate --kp <知识点名>` —— 弃用，`pick` / `review-list` 不再推它，`graph` / `view` 里标记 `deprecated`。
+- `node scripts/trainer.mjs undeprecate --kp <知识点名>` —— 撤销弃用，重新回到选题。
+
+弃用只是"退出循环"，不删题文件；若要彻底废弃，删除 `library/0xx-xxx/` 目录并重新 `scan`。弃用状态与 SM-2 进度一样落在 `progress.json`，跨会话持久。**弃用 ≠ 掌握**：它解决"题本身烂"，与"这道题会不会"是两回事。
 
 ## 自适应组织（数据组织）
 

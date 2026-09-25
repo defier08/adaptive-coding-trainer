@@ -15,19 +15,24 @@
 
 ## 二、质量分 q（客观为主）
 
-编程题的优势：q 大半可由客观结果决定，而非纯主观打分。判定表：
+编程题的优势：q 大半可由客观结果决定，而非纯主观打分。**默认档位**（由测试结果硬性决定，聊天场景下的首选）：
 
 | q | 判定依据 |
 |---|----------|
-| 5 | 测试全部通过，且**一次提交即过**，未看示例 / 提示 |
-| 4 | 测试全部通过，但**改了几次才过** |
-| 3 | 测试通过，但**翻了示例 / 提示**才写对 |
+| 4 | 测试全部通过 |
 | 2 | 部分用例失败，思路接近（如边界没处理） |
 | 0~1 | 基本没写对 / 卡死 / 完全跑不通 |
 
-> AI 在验证后依据上表给用户这道题定 q，再传给 `review-next`。"翻示例才过=3"这一档含少量主观，但其余档以测试结果为硬依据。
+**加分 / 减分档**（仅在能可靠观测用户行为时使用，否则别猜）：
+
+| q | 判定依据 | 观测条件 |
+|---|----------|----------|
+| 5 | 一次提交即过，未看示例 / 提示 | 确认用户没翻示例 |
+| 3 | 翻了示例 / 提示才写对 | 确认用户翻了示例 |
+
+> AI 在验证后依据上表给用户这道题定 q，再传给 `review-next`。多数练习落在 q∈{4,2,0} 之间是正常的，不必刻意造出 5 和 3。
 >
-> **降级规则**：若 AI 无法可靠观察"一次即过 / 改了几次 / 翻没翻示例"（这些依赖对用户行为的感知），应退化为：测试全过→q=4（有明确提示依赖则 3）；部分失败→2；跑不通→0。**宁可保守判低，不要放水判高**。
+> **核心规则**：感知不到行为就**不要猜**，用默认三档；**宁可保守判低，不要放水判高**。
 
 ## 三、SM-2 更新公式
 
@@ -63,16 +68,18 @@ due = today + interval 天
 ## 五、引擎 CLI（由 trainer.mjs 提供）
 
 ```
-node scripts/trainer.mjs init      --dir <exercises>            # 初始化 .progress.json
-node scripts/trainer.mjs scan      --dir <exercises>            # 扫描题目与元数据，构建依赖图
-node scripts/trainer.mjs enqueue   --dir <exercises> --kp <名> --source <stuck|project|system>  # 加入选题队列（三场景优先级）
-node scripts/trainer.mjs pick      --dir <exercises>            # 按优先级选题（返回 kp + 变体标识）
-node scripts/trainer.mjs review-list --dir <exercises> --limit 20   # 到期复习列表（按优先级）
-node scripts/trainer.mjs review-next --dir <exercises> --kp <名> --q <0-5> --variant <变体标识>  # 推进 SM-2
-node scripts/trainer.mjs state     --dir <exercises> --kp <名>  # 单知识点状态
-node scripts/trainer.mjs mastery   --dir <exercises> --kp <名>  # 掌握度评估（含变体通过数）
-node scripts/trainer.mjs graph     --dir <exercises>            # 依赖图 + 各点掌握状态 + 薄弱前置
-node scripts/trainer.mjs view      --dir <exercises>            # 按 tags 分组 / difficulty 排序的视图
+node scripts/trainer.mjs init                                    # 初始化 progress.json
+node scripts/trainer.mjs scan [--dir <附加题集合>]                 # 扫描题目与元数据（默认扫 library/，重建 meta 与 variants）
+node scripts/trainer.mjs enqueue --kp <名> --source <stuck|project>  # 加入选题队列（自动先 scan）
+node scripts/trainer.mjs pick                                    # 按优先级选题（队列 → 到期复习 → 拓扑推进新题）
+node scripts/trainer.mjs review-list [--limit 20]                 # 到期复习列表（仅"已学过且到期"的项）
+node scripts/trainer.mjs review-next --kp <名> --q <0-5> [--variant <变体标识>]  # 推进 SM-2
+node scripts/trainer.mjs state --kp <名>                          # 单知识点状态
+node scripts/trainer.mjs mastery --kp <名>                        # 掌握度评估（需 ≥2 个不同变体通过）
+node scripts/trainer.mjs deprecate --kp <名>                      # 弃用某知识点（题质量差时退出循环，不删题文件）
+node scripts/trainer.mjs undeprecate --kp <名>                    # 撤销弃用
+node scripts/trainer.mjs graph                                   # 依赖图 + 各点状态 + 薄弱前置 + 缺失前置
+node scripts/trainer.mjs view                                    # 按 tags 分组 / difficulty 排序的视图
 ```
 
-进度文件：默认 `~/.codebuddy/adaptive-coding/progress.json`（用户级、全局、跨项目共享，按 @kp 名索引），根目录可用环境变量 `ADAPTIVE_CODING_DIR` 覆盖。写入采用"临时文件 + rename"原子写，防止损坏；目录 / 文件缺失时自动创建。可用命令：`scan [--dir <项目exercises>]`（默认扫 library，汇总到全局进度）、`pick`、`review-list [--limit N]`、`review-next --kp <名> --q <0-5>`、`state --kp <名>`、`mastery --kp <名>`。`review-next` 的 `--q` 必须是 0~5 的数字，否则引擎报错不写入（防止 NaN 污染进度）。
+进度文件：默认 `~/.codebuddy/adaptive-coding/progress.json`（用户级、全局、跨项目共享，按 @kp 名索引）。根目录解析优先级：环境变量 `ADAPTIVE_CODING_DIR` > `config.json` 的 `adaptive_coding_dir` > 默认路径。写入采用"临时文件 + rename"原子写，并在替换前把上一版保留为 `progress.json.bak`；主文件损坏时自动从 `.bak` 恢复，两者都损坏才重置（stderr 有提示，进度不静默丢失）。`scan` 不再删除"本次未扫到"的进度（改名 / 临时移走目录不丢掌握度），无 meta 的孤儿条目由 `pick` / `review-list` 过滤、不参与选题。目录 / 文件缺失时自动创建。`--dir` 是**可选附加**的题集合目录，不传时只扫默认 `library/`（进度始终汇总进同一份全局进度）。`review-next` 的 `--q` 必须是 0~5 的整数，否则引擎报错不写入（防止 NaN 污染进度）；`--variant` 传当前所练变体的标识（`pick` / `review-list` 已返回，为相对路径），缺省时退化为根题。命令总览见上文 CLI 一节。

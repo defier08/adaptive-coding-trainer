@@ -59,9 +59,9 @@ modules/
 
 | 链路环节 | 涉及的原子知识点 | 指向 |
 |----------|------------------|------|
-| ② 签发 | JWT 签发 / 校验、密钥管理 | `exercises/0xx-JWT` |
-| ④ 校验 | 中间件机制、组合 | `exercises/0xx-中间件` |
-| ⑤ 授权 | RBAC、权限点、审核流 | `exercises/0xx-权限点` |
+| ② 签发 | JWT 签发 / 校验、密钥管理 | `library/0xx-JWT` |
+| ④ 校验 | 中间件机制、组合 | `library/0xx-中间件` |
+| ⑤ 授权 | RBAC、权限点、审核流 | `library/0xx-权限点` |
 
 ## 六、05-综合练习（串整条链）
 
@@ -75,4 +75,4 @@ modules/
 
 ## 八、与知识点层引擎的分工
 
-引擎 `scripts/trainer.mjs` 只负责**知识点层**（`exercises/`）的 SM-2 进度与选题。模块层（`modules/`）的"读"（01~04：方案选型 / 实现 / 调用链 / 清单）由 AI 按本文档顺序带过，不需要间隔复习；模块层的"练"（05-综合练习）若落成了 `template.js` + `test.js`，本质就是知识点层题，仍走 `trainer.mjs` 的 `review-next` 推进。模块层自身不重复造一套进度引擎。注意：引擎 `scan` 只扫描 `exercises/`（平铺编号目录），不扫 `modules/`——模块综合练习若要被引擎自动跟踪（进 SM-2 / 选题），需放入 `exercises/` 目录；留在 `modules/` 内则只能由 AI 手动 `review-next` 推进。
+引擎 `scripts/trainer.mjs` 只负责**知识点层**（`library/`）的 SM-2 进度与选题。模块层（`modules/`）的"读"（01~04：方案选型 / 实现 / 调用链 / 清单）由 AI 按本文档顺序带过，不需要间隔复习；模块层的"练"（05-综合练习）若落成了 `template.js` + `test.js`，本质就是知识点层题，仍走 `trainer.mjs` 的 `review-next` 推进。模块层自身不重复造一套进度引擎。注意：引擎 `scan` 只扫描 `library/`（平铺编号目录），不扫 `modules/`——模块综合练习若要被引擎自动跟踪（进 SM-2 / 选题），需放入 `library/` 目录；留在 `modules/` 内则只能由 AI 手动 `review-next` 推进。
